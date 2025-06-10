@@ -22,16 +22,20 @@ def process_norm2assV1(struc, pretime = 20, posttime = 20):
     nowtime = starttime = parse_time_to_hundredths(struc[0]['start']) - pretime
     for i in range(len(struc)):
         item = struc[i]
-        if item['type'] == 0:
-            if item['orig'] == '\n':
+        if item['type'] == 0 and item['orig'] == '\n':
+            try:
+                nowtime = parse_time_to_hundredths(item['start'])
+            except:
+                pass
+            finally:
                 endtime = nowtime + posttime
                 asstxt = 'Dialogue: 0,'+int2asstime(starttime)+','+int2asstime(endtime)+r',Default,,0,0,0,karaoke,'+asstxt+r'{\k'+str(posttime)+'}'
                 result += asstxt+'\n'
                 if i < len(struc)-1:
                     asstxt = ''
                     nowtime = starttime = parse_time_to_hundredths(struc[i+1]['start']) - pretime
-            else:
-                asstxt += item['orig']
+        elif 'start' not in item:
+            asstxt += item['orig']
         else:
             item_kbefore = parse_time_to_hundredths(item['start']) - nowtime
             if item_kbefore!=0:
@@ -53,8 +57,12 @@ def process_norm2assV2(struc, pretime = 20, posttime = 20):
     asstxt = r'{\k'+str(pretime)+'}'
     for i in range(len(struc)):
         item = struc[i]
-        if item['type'] == 0:
-            if item['orig'] == '\n':
+        if item['type'] == 0 and item['orig'] == '\n':
+            try:
+                nowtime = parse_time_to_hundredths(item['start'])
+            except:
+                pass
+            finally:
                 endtime = nowtime + posttime
                 asstxt = 'Dialogue: 0,'+int2asstime(starttime)+','+int2asstime(endtime)+r',Default,,0,0,0,karaoke,'+asstxt+r'{\k'+str(posttime)+'}'
                 result += asstxt+'\n'
@@ -62,17 +70,17 @@ def process_norm2assV2(struc, pretime = 20, posttime = 20):
                     starttime = parse_time_to_hundredths(struc[i+1]['start']) - pretime
                     nowtime = parse_time_to_hundredths(struc[i+1]['start'])
                     asstxt = r'{\k'+str(pretime)+'}'
-            else:
-                try:
-                    item_kdur = parse_time_to_hundredths(struc[i+1]['start']) - nowtime
-                    asstxt += r'{\k'+str(item_kdur)+'}'
-                    nowtime = parse_time_to_hundredths(struc[i+1]['start'])
-                except:
-                    pass
-                finally:
-                    asstxt += item['orig']
+        elif item['type'] == 0 and 'start' not in item:
+            try:
+                item_kdur = parse_time_to_hundredths(struc[i+1]['start']) - nowtime
+                asstxt += r'{\k'+str(item_kdur)+'}'
+                nowtime = parse_time_to_hundredths(struc[i+1]['start'])
+            except:
+                pass
+            finally:
+                asstxt += item['orig']
         else:
-            if struc[i+1]['type'] != 0:
+            if 'start' in struc[i+1]:
                 item_kdur = parse_time_to_hundredths(struc[i+1]['start']) - parse_time_to_hundredths(item['start'])
                 nowtime = parse_time_to_hundredths(struc[i+1]['start'])
             else:
@@ -159,4 +167,4 @@ if __name__=='__main__':
   'start': '[00:12:83]',
   'end': '[00:12:93]'},
  {'orig': '\n', 'type': 0}]
-    process_norm2assV2(input_struc)
+    print(process_norm2assV2(input_struc))

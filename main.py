@@ -36,14 +36,14 @@ def process_main(result_list):
                 marker_time_str = format_hundredths_to_time_str(marker_time)
                 current_line += f"{marker_time_str}⬤⬤⬤"
 
-        if item['type'] in [1, 3]:
+        if item['type'] in [1, 3] or item['type'] == 0 and item['orig']!='\n' and 'start' in item:
             current_line += f"{item['start']}{item['orig']}"
             last_end = item['end']
         elif item['type'] == 2:
             if item['orig'] != '':
                 current_line += f"{item['start']}{item['orig']}"
             last_end = item['end']
-        elif item['type'] == 0:
+        elif item['type'] == 0 and 'start' not in item:
             if last_end:
                 current_line += last_end+item['orig']
                 result.append(current_line)
@@ -52,12 +52,19 @@ def process_main(result_list):
                 last_end = None
             else:
                 current_line += item['orig']
+        elif item['type'] == 0 and item['orig']=='\n':
+            current_line += item['start']+item['orig']
+            result.append(current_line)
+            last_end_time = parse_time_to_hundredths(last_end)
+            current_line = ""
+            last_end = None
+            
         i += 1
 
     if current_line and last_end:
-        current_line += f"{last_end}"
+        current_line += last_end
         result.append(current_line)
-    result.append("\n")
+    result.append("\n@Offset=-150")
     return "".join(result)
 
 def process_ruby(result_list):
@@ -109,7 +116,7 @@ if __name__=='__main__':
     with open(input_text_path, 'r', encoding='utf-8') as file:
         for line in file:
             if line.strip():
-                result_list.extend(hn.process_haruhi_line(line))
+                result_list.extend(hn.process_haruhi_line(line)) # tail_correct
 
     alignment_tokens = []
     token_to_index_map = {}
@@ -124,6 +131,7 @@ if __name__=='__main__':
         else:
             print(f"alignment_tokens可能包含错误数据{item}")
 
+    print('Adding timelines...')
     alignment_results = align.align_audio_with_text(input_audio_path, alignment_tokens)
     for i, result in enumerate(alignment_results):
         if i in token_to_index_map:
@@ -157,3 +165,4 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         hrhlrc_output += ass2lrc.ass2lrc(i, 0)+'\n'
     with open('o_hrh.lrc', 'w', encoding='utf-8') as f:
         f.write(hrhlrc_output)
+    print('Success!')
