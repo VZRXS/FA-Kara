@@ -1,7 +1,7 @@
 import os
 import re
 import align
-import ass2lrc
+# import ass2lrc
 import haruraw2norm as hn
 import norm2ass
 
@@ -111,6 +111,45 @@ def process_ruby(result_list):
 
     return "\n".join(result)
 
+def process_rlf(result_list):
+    current_line = ""
+    last_end = None
+
+    i = 0
+    while i < len(result_list):
+        item = result_list[i]
+
+        if item['type'] in [1, 3]:
+            current_line += f"[1|{item['start'][1:-1]}]{item['orig']}"
+            last_end = item['end']
+        elif item['type'] == 2: # 不考虑加号
+            assert item['orig'] != '', "空字符有注音，rlf生成失败！"
+            kana_cnt = 1
+            kanji_surf = item['orig']
+            struc_str = f"{item['start'][1:-1]}]{item['ruby']}"
+            while result_list[i+1]['type'] == 2 and result_list[i+1]['orig'] == '':
+                i += 1
+                kana_cnt += 1
+                struc_str += f"[{result_list[i]['start'][1:-1]}]{result_list[i]['ruby']}"
+            kana_cnt = 9 if kana_cnt>9 else kana_cnt
+            current_line += '{'+kanji_surf+'|['+str(kana_cnt)+'|'+struc_str+'}'
+            last_end = result_list[i]['end']
+        elif item['type'] == 0 and 'start' in item:
+            current_line += f"[10|{item['start'][1:-1]}]{item['orig']}"
+            last_end = None
+        elif item['type'] == 0 and 'start' not in item:
+            if last_end:
+                current_line += f"[10|{last_end[1:-1]}]{item['orig']}"
+                last_end = None
+            else:
+                current_line += item['orig']
+
+        i += 1
+
+    if current_line and last_end:
+        current_line += last_end
+    return current_line
+
 if __name__=='__main__':
     input_text_path = 'i.txt'
     input_audio_path = 'i.wav'
@@ -175,6 +214,9 @@ if __name__=='__main__':
     content = f"{main_output}\n{ruby_output}"
     with open('o_ruby.lrc', 'w', encoding='utf-8') as f:
         f.write(content)
+    rlf_output = process_rlf(result_list)
+    with open('o_rlf.lrc', 'w', encoding='utf-8') as f:
+        f.write(rlf_output)
     ass_output = norm2ass.process_norm2assV2(result_list)
     ass_head = '''[Script Info]
 ScriptType: v4.00+
@@ -191,9 +233,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
     with open('o.ass', 'w', encoding='utf-8') as f:
         f.write(ass_head+ass_output)
-    hrhlrc_output = ''
-    for i in ass_output.splitlines():
-        hrhlrc_output += ass2lrc.ass2lrc(i, 0)+'\n'
-    with open('o_hrh.lrc', 'w', encoding='utf-8') as f:
-        f.write(hrhlrc_output)
+    # hrhlrc_output = ''
+    # for i in ass_output.splitlines():
+    #     hrhlrc_output += ass2lrc.ass2lrc(i, 0)+'\n'
+    # with open('o_hrh.lrc', 'w', encoding='utf-8') as f:
+    #     f.write(hrhlrc_output)
     print('Success!')
