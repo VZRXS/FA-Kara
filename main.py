@@ -5,6 +5,8 @@ import ass2lrc
 import haruraw2norm as hn
 import norm2ass
 
+tail_correct = 1 # 1,2分别为两种尝试拖长尾音的方式，0则不拖长
+
 def parse_time_to_hundredths(time_str):
     match = re.match(r'\[(\d{2}):(\d{2}):(\d{2})\]', time_str)
     minutes, seconds, hundredths = int(match.group(1)), int(match.group(2)), int(match.group(3))
@@ -64,6 +66,8 @@ def process_main(result_list):
     if current_line and last_end:
         current_line += last_end
         result.append(current_line)
+    if item['orig']!='\n':
+        result.append("\n")
     result.append("\n@Offset=-150")
     return "".join(result)
 
@@ -107,7 +111,6 @@ def process_ruby(result_list):
 
     return "\n".join(result)
 
-
 if __name__=='__main__':
     input_text_path = 'i.txt'
     input_audio_path = 'i.wav'
@@ -116,7 +119,35 @@ if __name__=='__main__':
     with open(input_text_path, 'r', encoding='utf-8') as file:
         for line in file:
             if line.strip():
-                result_list.extend(hn.process_haruhi_line(line)) # tail_correct
+                result_list.extend(hn.process_haruhi_line(line))
+
+    if tail_correct == 1:
+        for i in range(len(result_list)):
+            if result_list[i]['type']==0:
+                try:
+                    if len(result_list[i-1]['pron'])>1 and result_list[i-1]['type']!=0:
+                        pre_vowel = result_list[i-1]['pron'][-1]
+                        post_consonant = ''
+                        if i < len(result_list)-1:
+                            post_i = i + 1
+                            while post_i < len(result_list):
+                                if 'pron' in result_list[post_i] and len(result_list[post_i]['pron'])>=1:
+                                    post_consonant = result_list[post_i]['pron'][0]
+                                    break
+                                else:
+                                    post_i += 1
+                        if pre_vowel!=post_consonant and post_consonant not in ('a', 'e', 'i', 'o', 'u'):
+                            result_list[i]['pron'] = pre_vowel + 'h'
+                except:
+                    continue
+    elif tail_correct == 2:
+        for i in range(len(result_list)):
+            if result_list[i]['type']==0:
+                try: # 合理利用baseline尾音特性
+                    if len(result_list[i-1]['pron'])>=1 and result_list[i-1]['type']!=0:
+                        result_list[i]['pron'] = result_list[i-1]['pron'][-1] + 'h'
+                except:
+                    continue
 
     alignment_tokens = []
     token_to_index_map = {}

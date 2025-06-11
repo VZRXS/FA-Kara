@@ -23,7 +23,7 @@ D:\Python\Python313\python.exe main.py
 - `o_ruby.lrc`: 可直接在NicoKaraMaker3使用
 
 ## 环境配置
-参考`requirements.txt`，请根据实际情况自行配置。
+参考`requirements.txt`，请根据实际情况自行配置。建议先参考[PyTorch官网](https://pytorch.org/get-started/locally/)的说明安装PyTorch，再安装其他库。
 
 ## 模型简介
 主要使用了PyTorch的[MMS_FA](https://arxiv.org/abs/2305.13516)。

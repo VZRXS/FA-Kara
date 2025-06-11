@@ -29,7 +29,7 @@ def get_norm_ruby(item):
     if item['type'] == 2:
         return item['ruby']
     if item['type'] == 3:
-        return item['orig']
+        return item['orig'].lower() if is_english(item['orig']) else item['orig']
     return tail_pron
 
 def get_norm_surface(item):
@@ -118,7 +118,7 @@ def sylla_split(kana_str):
             i += 1
     return kana_list
 
-def process_haruhi_line(line, tail_correct = True):
+def process_haruhi_line(line):
     # 使用正则表达式分割字符串，捕获{...}结构
     tokens = re.split(r'(\{.*?\})', line)
     result = []
@@ -150,7 +150,7 @@ def process_haruhi_line(line, tail_correct = True):
         else:
             token = sylla_split(token)
             for char in token:
-                if is_kana(char):
+                if is_kana(char) or is_english(char):
                     result.append({'orig': char, 'type': 3})
                 else:
                     result.append({'orig': char, 'type': 0})
@@ -171,22 +171,20 @@ def process_haruhi_line(line, tail_correct = True):
         result[i]['pron'] = pron
         postpron = pron
     
-    # 通用读音修正
+    # 通用读音修正（は，へ）
     line_pron_list = [item['pron'] for item in result]
     line_surface = ''.join([get_norm_surface(i) for i in result])
     line_roma = kks.convert(''.join([token.phonetic for token in tokenizer.tokenize(line_surface)]))[0]['hepburn']
     line_roma_proc = min_error_split(line_pron_list, line_roma)
     for i in range(len(result)):
-        if result[i]['type']==0 and tail_correct:
-            try: # 合理利用baseline尾音特性，但是保持type为0似乎是自找麻烦
-                result[i]['pron'] = result[i-1]['pron'][-1]
+        if result[i]['type']==3:
+            try:
+                if result[i]['orig']=='は' and line_roma_proc[i]=='wa':
+                    result[i]['pron'] = 'wa'
+                elif result[i]['orig']=='へ' and line_roma_proc[i]=='e':
+                    result[i]['pron'] = 'e'
             except:
-                continue
-        elif result[i]['type']==3:
-            if result[i]['orig']=='は' and line_roma_proc[i]=='wa':
-                result[i]['pron'] = 'wa'
-            elif result[i]['orig']=='へ' and line_roma_proc[i]=='e':
-                result[i]['pron'] = 'e'
+                print('Ignored errors when trying to correct ha and he...')
 
     return result
 
