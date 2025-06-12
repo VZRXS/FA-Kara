@@ -1,11 +1,10 @@
+import argparse
 import os
 import re
 import align
 # import ass2lrc
 import haruraw2norm as hn
 import norm2ass
-
-tail_correct = 1 # 1,2分别为两种尝试拖长尾音的方式，0则不拖长
 
 def parse_time_to_hundredths(time_str):
     match = re.match(r'\[(\d{2}):(\d{2}):(\d{2})\]', time_str)
@@ -36,7 +35,7 @@ def process_main(result_list):
                 (last_end_time is None and current_start_time > 500)):
                 marker_time = max(0, current_start_time - 300)
                 marker_time_str = format_hundredths_to_time_str(marker_time)
-                current_line += f"{marker_time_str}⬤⬤⬤"
+                current_line += f"{marker_time_str}●●●"
 
         if item['type'] in [1, 3] or item['type'] == 0 and item['orig']!='\n' and 'start' in item:
             current_line += f"{item['start']}{item['orig']}"
@@ -119,7 +118,7 @@ def process_rlf(result_list):
     while i < len(result_list):
         item = result_list[i]
 
-        if item['type'] in [1, 3]:
+        if item['type'] in [1, 3] or item['type'] == 0 and 'start' in item and item['orig'] not in ('\n', ' ', '　'):
             current_line += f"[1|{item['start'][1:-1]}]{item['orig']}"
             last_end = item['end']
         elif item['type'] == 2: # 不考虑加号
@@ -138,7 +137,7 @@ def process_rlf(result_list):
             current_line += f"[10|{item['start'][1:-1]}]{item['orig']}"
             last_end = None
         elif item['type'] == 0 and 'start' not in item:
-            if last_end:
+            if last_end and item['orig'] in ('\n', ' ', '　'):
                 current_line += f"[10|{last_end[1:-1]}]{item['orig']}"
                 last_end = None
             else:
@@ -151,8 +150,18 @@ def process_rlf(result_list):
     return current_line
 
 if __name__=='__main__':
-    input_text_path = 'i.txt'
-    input_audio_path = 'i.wav'
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    parser = argparse.ArgumentParser(description='可选参数')
+    parser.add_argument('-t', '--tail_correct', type=int, default=1, help='1,2分别为两种尝试延长尾音的方式，否则不拖长')
+    parser.add_argument('-p', '--path_io', default='', help='输入输出文件路径')
+    args = parser.parse_args()
+
+    tail_correct = args.tail_correct
+    user_path = args.path_io
+    real_io_path = os.path.normpath(user_path) if os.path.isabs(user_path) else os.path.normpath(os.path.join(script_dir, user_path))
+
+    input_text_path = os.path.join(real_io_path, 'i.txt')
+    input_audio_path = os.path.join(real_io_path, 'i.wav')
 
     result_list = []
     with open(input_text_path, 'r', encoding='utf-8') as file:
@@ -212,10 +221,10 @@ if __name__=='__main__':
     main_output = process_main(result_list)
     ruby_output = process_ruby(result_list)
     content = f"{main_output}\n{ruby_output}"
-    with open('o_ruby.lrc', 'w', encoding='utf-8') as f:
+    with open(os.path.join(real_io_path, 'o_ruby.lrc'), 'w', encoding='utf-8') as f:
         f.write(content)
     rlf_output = process_rlf(result_list)
-    with open('o_rlf.lrc', 'w', encoding='utf-8') as f:
+    with open(os.path.join(real_io_path, 'o_rlf.lrc'), 'w', encoding='utf-8') as f:
         f.write(rlf_output)
     ass_output = norm2ass.process_norm2assV2(result_list)
     ass_head = '''[Script Info]
@@ -231,11 +240,11 @@ Style: Default,Source Han Serif,71,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
-    with open('o.ass', 'w', encoding='utf-8') as f:
+    with open(os.path.join(real_io_path, 'o.ass'), 'w', encoding='utf-8') as f:
         f.write(ass_head+ass_output)
     # hrhlrc_output = ''
     # for i in ass_output.splitlines():
     #     hrhlrc_output += ass2lrc.ass2lrc(i, 0)+'\n'
-    # with open('o_hrh.lrc', 'w', encoding='utf-8') as f:
+    # with open(os.path.join(real_io_path, 'o_hrh.lrc'), 'w', encoding='utf-8') as f:
     #     f.write(hrhlrc_output)
     print('Success!')
