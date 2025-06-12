@@ -33,7 +33,7 @@ python main.py
 如果你从未接触过Python，可按照如下步骤配置环境：
 1. 安装[Python](https://www.python.org/)（推荐版本3.13），并配置好环境变量；
 2. 根据操作系统与GPU情况，安装对应的[PyTorch](https://pytorch.org/get-started/locally/)；
-3. 再用pip安装其他库，如Janome, pykakasi等。
+3. 再用pip安装其他库，如Janome, librosa, pykakasi等。
 
 ## 模型简介
 主要使用了PyTorch的[MMS_FA](https://arxiv.org/abs/2305.13516)。
