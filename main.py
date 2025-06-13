@@ -131,6 +131,7 @@ if __name__=='__main__':
                     if 'start' in result_list[next_ind]:
                         next_start = parse_time_to_hundredths(result_list[next_ind]['start'])
                         break
+                    next_ind += 1
                 left_index = bisect.bisect_left(ns_ends, current_end)
                 right_index = bisect.bisect_left(ns_ends, next_start)
                 if left_index < right_index and left_index < len(ns_ends):
