@@ -16,11 +16,12 @@ def parse_time_to_hundredths(time_str):
     return minutes * 6000 + seconds * 100 + hundredths
 
 def process_norm2assV1(struc, pretime = 20, posttime = 20):
-    '模型输出的实际时值'
+    '模型输出的实际时值，不再维护'
     result = ''
-    asstxt = ''
-    nowtime = starttime = parse_time_to_hundredths(struc[0]['start']) - pretime
     for i in range(len(struc)):
+        if not result or result[-1]=='\n':
+            asstxt = ''
+            nowtime = starttime = parse_time_to_hundredths([itemd for itemd in struc[i:] if itemd['type'] != 0][0]['start']) - pretime
         item = struc[i]
         if item['type'] == 0 and item['orig'] == '\n':
             try:
@@ -31,9 +32,6 @@ def process_norm2assV1(struc, pretime = 20, posttime = 20):
                 endtime = nowtime + posttime
                 asstxt = 'Dialogue: 0,'+int2asstime(starttime)+','+int2asstime(endtime)+r',Default,,0,0,0,karaoke,'+asstxt+r'{\k'+str(posttime)+'}'
                 result += asstxt+'\n'
-                if i < len(struc)-1:
-                    asstxt = ''
-                    nowtime = starttime = parse_time_to_hundredths(struc[i+1]['start']) - pretime
         elif 'start' not in item:
             asstxt += item['orig']
         else:
@@ -52,11 +50,19 @@ def process_norm2assV1(struc, pretime = 20, posttime = 20):
 def process_norm2assV2(struc, pretime = 20, posttime = 20):
     '仿NicokaraMaker.lrc时值'
     result = ''
-    starttime = parse_time_to_hundredths(struc[0]['start']) - pretime
-    nowtime = parse_time_to_hundredths(struc[0]['start'])
+    starttime = nowtime = None
     asstxt = r'{\k'+str(pretime)+'}'
-    for i in range(len(struc)):
+    i = 0
+    while i < len(struc):
         item = struc[i]
+        if not starttime:
+            try:
+                starttime = parse_time_to_hundredths(item['start']) - pretime
+                nowtime = parse_time_to_hundredths(item['start'])
+            except:
+                asstxt += item['orig']
+                i += 1
+                continue
         if item['type'] == 0 and item['orig'] == '\n':
             try:
                 nowtime = parse_time_to_hundredths(item['start'])
@@ -64,12 +70,9 @@ def process_norm2assV2(struc, pretime = 20, posttime = 20):
                 pass
             finally:
                 endtime = nowtime + posttime
-                asstxt = 'Dialogue: 0,'+int2asstime(starttime)+','+int2asstime(endtime)+r',Default,,0,0,0,karaoke,'+asstxt+r'{\k'+str(posttime)+'}'
-                result += asstxt+'\n'
-                if i < len(struc)-1:
-                    starttime = parse_time_to_hundredths(struc[i+1]['start']) - pretime
-                    nowtime = parse_time_to_hundredths(struc[i+1]['start'])
-                    asstxt = r'{\k'+str(pretime)+'}'
+                result += 'Dialogue: 0,'+int2asstime(starttime)+','+int2asstime(endtime)+r',Default,,0,0,0,karaoke,'+asstxt+r'{\k'+str(posttime)+'}'+'\n'
+                starttime = nowtime = None
+                asstxt = r'{\k'+str(pretime)+'}'
         elif item['type'] == 0 and 'start' not in item:
             try:
                 item_kdur = parse_time_to_hundredths(struc[i+1]['start']) - nowtime
@@ -91,6 +94,7 @@ def process_norm2assV2(struc, pretime = 20, posttime = 20):
                 asstxt += ('#' if item['orig']=='' else item['orig']) + '|<' + item['ruby']
             else:
                 asstxt += item['orig']
+        i += 1
     return result
 
 
