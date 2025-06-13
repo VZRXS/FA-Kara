@@ -1,8 +1,8 @@
 import torch
 import torchaudio
 import librosa
-import numpy as np
 import math
+import numpy as np
 
 def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,7 +12,7 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
         waveform, sample_rate = torchaudio.load(audio_file_path)
         
         # 处理非静音区域
-        if len(non_silent_ranges)>=1:
+        if non_silent_ranges:
             # 将时间(秒)转换为样本点
             total_samples = waveform.shape[1]
             sample_ranges = []
@@ -55,7 +55,7 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
         # 映射回原始时间
         def map_to_original_time(adjusted_time):
             """将处理后的时间映射回原始音频时间"""
-            if len(non_silent_ranges)==0:
+            if not non_silent_ranges:
                 return adjusted_time
             
             cumulative_duration = 0.0
@@ -66,6 +66,12 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
                 cumulative_duration += segment_duration
             return non_silent_ranges[-1][1]  # 超出范围返回最后时间
         
+        # 时间格式化函数
+        def format_time(time_sec):
+            minutes, remainder = divmod(time_sec, 60)
+            seconds, centiseconds = divmod(remainder, 1)
+            return f"[{int(minutes):02d}:{int(seconds):02d}:{math.floor(centiseconds * 100):02d}]"
+
         # 处理每个token的时间对齐
         for i, spans in enumerate(token_spans):
             if not spans:
@@ -83,12 +89,6 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
             # 映射回原始音频时间
             original_start = map_to_original_time(adjusted_start)
             original_end = map_to_original_time(adjusted_end)
-            
-            # 时间格式化函数
-            def format_time(time_sec):
-                minutes, remainder = divmod(time_sec, 60)
-                seconds, centiseconds = divmod(remainder, 1)
-                return f"[{int(minutes):02d}:{int(seconds):02d}:{math.floor(centiseconds * 100):02d}]"
             
             results.append({
                 'token': valid_tokens[i],

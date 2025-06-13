@@ -1,4 +1,5 @@
 import argparse
+import bisect
 import librosa
 import numpy as np
 import os
@@ -10,13 +11,13 @@ import haruraw2norm as hn
 import norm2ass
 from norm2lrc import *
 
-def non_silent_recog(audio_path):
+def non_silent_recog(audio_path, frame_second = 1, threspct = 10, thresrto = .1):
     '识别非静音片段'
     y, sr = librosa.load(audio_path, sr=None)
-    frame_length = int(sr * 1)  # 1s 帧
+    frame_length = int(sr * frame_second)
     hop_length = frame_length // 2  # 50% 重叠
     energy = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
-    threshold = np.percentile(energy, 90) * 0.1  # 取前10%能量的10%作为阈值
+    threshold = np.percentile(energy, 100-threspct) * thresrto
     non_silent_frames = energy > threshold
     times = librosa.frames_to_time(np.arange(len(energy)), sr=sr, hop_length=hop_length) # 转换为时间点
     
@@ -37,16 +38,26 @@ def non_silent_recog(audio_path):
 if __name__=='__main__':
     script_dir = os.path.dirname(os.path.realpath(__file__))
     parser = argparse.ArgumentParser(description='可选参数')
-    parser.add_argument('-t', '--tail_correct', type=int, default=1, help='1,2分别为两种尝试延长尾音的方式，否则不拖长')
-    parser.add_argument('-p', '--path_io', default='', help='输入输出文件路径')
+    parser.add_argument('-p', '--path_io', default='', help='输入输出文件目录')
+    parser.add_argument('-ia', '--input_audio', default='i.wav', help='输入音频文件名')
+    parser.add_argument('-it', '--input_text', default='i.txt', help='输入歌词文件名')
+    parser.add_argument('-t', '--tail_correct', type=int, default=3, help='尾音拖长选项')
+    parser.add_argument('-tl', '--tail_limit_window', type=float, default=0.8, help='全曲静音检测窗口时长(s)')
+    parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数')
+    parser.add_argument('-tr', '--tail_thres_ratio', type=float, default=0.1, help='尾音阈值比例')
     args = parser.parse_args()
 
-    tail_correct = args.tail_correct
     user_path = args.path_io
+    user_audio_path = args.input_audio
+    user_text_path = args.input_text
+    tail_correct = args.tail_correct
+    silent_window_s = args.tail_limit_window
+    tail_thres_pct = args.tail_thres_pct
+    tail_thres_ratio = args.tail_thres_ratio
     real_io_path = os.path.normpath(user_path) if os.path.isabs(user_path) else os.path.normpath(os.path.join(script_dir, user_path))
 
-    input_text_path = os.path.join(real_io_path, 'i.txt')
-    input_audio_path = os.path.join(real_io_path, 'i.wav')
+    input_text_path = os.path.normpath(os.path.join(real_io_path, user_text_path))
+    input_audio_path = os.path.normpath(os.path.join(real_io_path, user_audio_path))
 
     print('Loading files...')
     result_list = []
@@ -54,6 +65,8 @@ if __name__=='__main__':
         for line in file:
             if line.strip():
                 result_list.extend(hn.process_haruhi_line(line))
+    if result_list[-1]['orig']!='\n':
+        result_list.append({'orig': '\n', 'type': 0, 'pron': ''})
 
     if tail_correct == 1:
         for i in range(len(result_list)):
@@ -96,7 +109,7 @@ if __name__=='__main__':
         else:
             print(f"alignment_tokens可能包含错误数据{item}")
 
-    non_silent_ranges = non_silent_recog(input_audio_path)
+    non_silent_ranges = non_silent_recog(input_audio_path, silent_window_s, tail_thres_pct, tail_thres_ratio)
 
     print('Adding timelines...')
     alignment_results = align.align_audio_with_text(input_audio_path, alignment_tokens, non_silent_ranges)
@@ -106,6 +119,23 @@ if __name__=='__main__':
             result_list[original_index]['start'] = result['start']
             result_list[original_index]['end'] = result['end']
 
+    if tail_correct == 3:
+        ns_small = non_silent_recog(input_audio_path, .02, tail_thres_pct, tail_thres_ratio)
+        ns_ends = [int(np.ceil(ns_end * 100)) for _, ns_end in ns_small]
+        for i in range(len(result_list)-1):
+            if result_list[i]['type'] != 0 and result_list[i+1]['type'] == 0:
+                current_end = parse_time_to_hundredths(result_list[i]['end'])
+                next_ind = i + 2
+                next_start = np.inf
+                while next_ind < len(result_list):
+                    if 'start' in result_list[next_ind]:
+                        next_start = parse_time_to_hundredths(result_list[next_ind]['start'])
+                        break
+                left_index = bisect.bisect_left(ns_ends, current_end)
+                right_index = bisect.bisect_left(ns_ends, next_start)
+                if left_index < right_index and left_index < len(ns_ends):
+                    result_list[i]['end'] = format_hundredths_to_time_str(ns_ends[left_index])
+                
     main_output = process_main(result_list)
     ruby_output = process_ruby(result_list)
     content = f"{main_output}\n{ruby_output}"
