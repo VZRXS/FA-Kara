@@ -11,18 +11,15 @@ import haruraw2norm as hn
 import norm2ass
 from norm2lrc import *
 
-def non_silent_recog(audio_path, frame_second = 1, threspct = 10, thresrto = .1):
+def non_silent_recog(audio_file, sr = None, frame_second = 1, threspct = 10, thresrto = .1):
     '识别非静音片段'
-    y, sr = librosa.load(audio_path, sr=None)
     frame_length = int(sr * frame_second)
     hop_length = frame_length // 2  # 50% 重叠
-    energy = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
+    energy = librosa.feature.rms(y=audio_file, frame_length=frame_length, hop_length=hop_length)[0]
     threshold = np.percentile(energy, 100-threspct) * thresrto
     non_silent_frames = energy > threshold
     times = librosa.frames_to_time(np.arange(len(energy)), sr=sr, hop_length=hop_length) # 转换为时间点
-    
-    # 合并连续片段
-    segments = []
+    segments = [] # 合并连续片段
     start = None
     for i, (t, active) in enumerate(zip(times, non_silent_frames)):
         if active and start is None:
@@ -32,21 +29,22 @@ def non_silent_recog(audio_path, frame_second = 1, threspct = 10, thresrto = .1)
             start = None
     if start is not None:
         segments.append((start, times[-1]))
-
     return segments
 
 if __name__=='__main__':
     script_dir = os.path.dirname(os.path.realpath(__file__))
     parser = argparse.ArgumentParser(description='可选参数')
-    parser.add_argument('-p', '--path_io', default='', help='输入输出文件目录')
+    parser.add_argument('-v', '--audio_speedx', type=float, default=1, help='推理时使用的音频倍速')
+    parser.add_argument('-p', '--path_io', default='', help='输入输出文件目录。基于主文件所在目录，支持绝对路径或相对路径')
     parser.add_argument('-ia', '--input_audio', default='i.wav', help='输入音频文件名')
     parser.add_argument('-it', '--input_text', default='i.txt', help='输入歌词文件名')
-    parser.add_argument('-t', '--tail_correct', type=int, default=3, help='尾音拖长选项')
-    parser.add_argument('-tl', '--tail_limit_window', type=float, default=0.8, help='全曲静音检测窗口时长(s)')
-    parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数')
-    parser.add_argument('-tr', '--tail_thres_ratio', type=float, default=0.1, help='尾音阈值比例')
+    parser.add_argument('-t', '--tail_correct', type=int, default=3, help='尾音拖长选项。建议取默认值3')
+    parser.add_argument('-tl', '--tail_limit_window', type=float, default=0.8, help='全曲静音检测窗口时长，单位：秒')
+    parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数，单位：%。以音频能量前“百分位数”的一定比例作为静音检测阈值')
+    parser.add_argument('-tr', '--tail_thres_ratio', type=float, default=0.1, help='尾音阈值比例。以音频能量前百分位数的一定“比例”作为静音检测阈值')
     args = parser.parse_args()
 
+    audio_speed = args.audio_speedx
     user_path = args.path_io
     user_audio_path = args.input_audio
     user_text_path = args.input_text
@@ -109,10 +107,18 @@ if __name__=='__main__':
         else:
             print(f"alignment_tokens可能包含错误数据{item}")
 
-    non_silent_ranges = non_silent_recog(input_audio_path, silent_window_s, tail_thres_pct, tail_thres_ratio)
+    audio_file, sr = librosa.load(input_audio_path, sr=None) 
+    non_silent_ranges = non_silent_recog(audio_file, sr, silent_window_s, tail_thres_pct, tail_thres_ratio)
 
-    print('Adding timelines...')
-    alignment_results = align.align_audio_with_text(input_audio_path, alignment_tokens, non_silent_ranges)
+    if audio_speed == 1:
+        print('Adding timelines...')
+        alignment_results = align.align_audio_with_text(audio_file, alignment_tokens, non_silent_ranges, sr)
+    else:
+        print('Changing the audio speed...')
+        y_processed = librosa.effects.time_stretch(audio_file, rate=audio_speed)
+        print('Adding timelines...')
+        alignment_results = align.align_audio_with_text(y_processed, alignment_tokens, non_silent_ranges, sr, audio_speed)
+
     for i, result in enumerate(alignment_results):
         if i in token_to_index_map:
             original_index = token_to_index_map[i]
@@ -120,7 +126,7 @@ if __name__=='__main__':
             result_list[original_index]['end'] = result['end']
 
     if tail_correct == 3:
-        ns_small = non_silent_recog(input_audio_path, .02, tail_thres_pct, tail_thres_ratio)
+        ns_small = non_silent_recog(audio_file, sr, .02, tail_thres_pct, tail_thres_ratio)
         ns_ends = [int(np.ceil(ns_end * 100)) for _, ns_end in ns_small]
         for i in range(len(result_list)-1):
             if result_list[i]['type'] != 0 and result_list[i+1]['type'] == 0:

@@ -4,12 +4,17 @@ import librosa
 import math
 import numpy as np
 
-def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
+def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[], sr=None, speed=1):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     try:
         bundle = torchaudio.pipelines.MMS_FA
-        waveform, sample_rate = torchaudio.load(audio_file_path)
+        if isinstance(audio_file_path, str):
+            waveform, sample_rate = torchaudio.load(audio_file_path)
+        else:
+            waveform = torch.tensor(audio_file_path).float()
+            waveform = waveform.unsqueeze(0)
+            sample_rate = sr
         
         # 处理非静音区域
         if non_silent_ranges:
@@ -17,8 +22,8 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
             total_samples = waveform.shape[1]
             sample_ranges = []
             for start_sec, end_sec in non_silent_ranges:
-                start_sample = int(start_sec * sample_rate)
-                end_sample = min(int(end_sec * sample_rate), total_samples)
+                start_sample = int(start_sec * sample_rate / speed)
+                end_sample = min(int(end_sec * sample_rate / speed), total_samples)
                 sample_ranges.append((start_sample, end_sample))
             
             # 提取并拼接非静音片段
@@ -49,7 +54,7 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[]):
             token_spans = aligner(emission[0], tokens)
         
         # 时间转换参数
-        frame_duration = 1.0 / bundle.sample_rate * 320
+        frame_duration = 1.0 / bundle.sample_rate * 320 * speed
         results = []
         
         # 映射回原始时间
