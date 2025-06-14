@@ -34,6 +34,8 @@ def non_silent_recog(audio_file, sr = None, frame_second = 1, threspct = 10, thr
 if __name__=='__main__':
     script_dir = os.path.dirname(os.path.realpath(__file__))
     parser = argparse.ArgumentParser(description='可选参数')
+    parser.add_argument('-x', '--sokuon_split', type=int, default=0, help='是否将促音与前一字符拆开')
+    parser.add_argument('-n', '--hatsuon_split', type=int, default=1, help='是否将拨音与前一字符拆开')
     parser.add_argument('-v', '--audio_speedx', type=float, default=1, help='推理时使用的音频倍速')
     parser.add_argument('-p', '--path_io', default='', help='输入输出文件目录。基于主文件所在目录，支持绝对路径或相对路径')
     parser.add_argument('-ia', '--input_audio', default='i.wav', help='输入音频文件名')
@@ -44,6 +46,8 @@ if __name__=='__main__':
     parser.add_argument('-tr', '--tail_thres_ratio', type=float, default=0.1, help='尾音阈值比例。以音频能量前百分位数的一定“比例”作为静音检测阈值')
     args = parser.parse_args()
 
+    sokuon_split = args.sokuon_split
+    hatsuon_split = args.hatsuon_split
     audio_speed = args.audio_speedx
     user_path = args.path_io
     user_audio_path = args.input_audio
@@ -52,8 +56,8 @@ if __name__=='__main__':
     silent_window_s = args.tail_limit_window
     tail_thres_pct = args.tail_thres_pct
     tail_thres_ratio = args.tail_thres_ratio
+    
     real_io_path = os.path.normpath(user_path) if os.path.isabs(user_path) else os.path.normpath(os.path.join(script_dir, user_path))
-
     input_text_path = os.path.normpath(os.path.join(real_io_path, user_text_path))
     input_audio_path = os.path.normpath(os.path.join(real_io_path, user_audio_path))
 
@@ -62,7 +66,7 @@ if __name__=='__main__':
     with open(input_text_path, 'r', encoding='utf-8') as file:
         for line in file:
             if line.strip():
-                result_list.extend(hn.process_haruhi_line(line))
+                result_list.extend(hn.process_haruhi_line(line, sokuon_split, hatsuon_split))
     if result_list[-1]['orig']!='\n':
         result_list.append({'orig': '\n', 'type': 0, 'pron': ''})
 

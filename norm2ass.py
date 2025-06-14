@@ -41,7 +41,7 @@ def process_norm2assV1(struc, pretime = 20, posttime = 20):
             item_kdur = parse_time_to_hundredths(item['end']) - parse_time_to_hundredths(item['start'])
             asstxt += r'{\k'+str(item_kdur)+'}'
             if item['type'] == 2:
-                asstxt += ('#' if item['orig']=='' else item['orig']) + '|<' + item['ruby']
+                asstxt += ('#|' if item['orig']=='' else item['orig'] + '|<') + item['ruby']
             else:
                 asstxt += item['orig']
             nowtime = parse_time_to_hundredths(item['end'])
@@ -91,7 +91,7 @@ def process_norm2assV2(struc, pretime = 20, posttime = 20):
                 nowtime = parse_time_to_hundredths(item['end'])
             asstxt += r'{\k'+str(item_kdur)+'}'
             if item['type'] == 2:
-                asstxt += ('#' if item['orig']=='' else item['orig']) + '|<' + item['ruby']
+                asstxt += ('#|' if item['orig']=='' else item['orig'] + '|<') + item['ruby']
             else:
                 asstxt += item['orig']
         i += 1

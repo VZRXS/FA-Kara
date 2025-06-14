@@ -30,10 +30,12 @@ def get_norm_ruby(item):
         return item['ruby']
     if item['type'] == 3:
         return item['orig'].lower() if is_english(item['orig']) else item['orig']
+    if item['type'] == 1:
+        return item['orig'].lower()
     return tail_pron
 
 def get_norm_surface(item):
-    if item['type'] in (2,3):
+    if item['type'] in (1,2,3):
         return item['orig']
     return ''
 
@@ -100,14 +102,17 @@ def min_error_split(target_list, s):
     return result[::-1]
 
 
-def sylla_split(kana_str):
+def sylla_split(kana_str, sokuon_split=False, hatsuon_split=True):
     kana_list = []
     i = 0
     n = len(kana_str)
     while i < n:
         current_char = kana_str[i]
-        if current_char in ['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ー',
-                            'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ']:
+        small_kana = ['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ー',
+                      'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ']
+        if not sokuon_split: small_kana += ['っ', 'ッ']
+        if not hatsuon_split: small_kana += ['ん', 'ン']
+        if current_char in small_kana:
             if i > 0:
                 kana_list[-1] += current_char
             else:
@@ -118,7 +123,7 @@ def sylla_split(kana_str):
             i += 1
     return kana_list
 
-def process_haruhi_line(line):
+def process_haruhi_line(line, sokuon_split=False, hatsuon_split=True):
     # 使用正则表达式分割字符串，捕获{...}结构
     tokens = re.split(r'(\{.*?\})', line)
     result = []
@@ -132,7 +137,7 @@ def process_haruhi_line(line):
             parts = content.split('|')
             assert len(parts) == 2, f"注音格式错误：{token}"
             kanji, ruby_text = parts
-            ruby_text = sylla_split(ruby_text)
+            ruby_text = sylla_split(ruby_text, sokuon_split, hatsuon_split)
             assert len(ruby_text)>=1, "振假名为空"
             result.append({
                 'orig': kanji,
@@ -148,7 +153,7 @@ def process_haruhi_line(line):
                     })        
         # 处理普通字符
         else:
-            token = sylla_split(token)
+            token = sylla_split(token, sokuon_split, hatsuon_split)
             for char in token:
                 if is_kana(char) or is_english(char):
                     result.append({'orig': char, 'type': 3})
@@ -159,13 +164,15 @@ def process_haruhi_line(line):
     postpron = None        
     for i in range(len(result)-1, -1, -1):
         ruby_now = get_norm_ruby(result[i])
-        if ruby_now in ('っ', 'ッ'):
+        if result[i]['type']!=0 and ruby_now and ruby_now[-1] in ('っ', 'ッ'):
             try:
                 pron = postpron[0]
             except:
                 pron = tail_pron
             else:
                 if pron=='c': pron = 't'
+            finally:
+                pron = kks.convert(ruby_now[:-1])[0]['hepburn'] + pron
         else:
             pron = kks.convert(ruby_now)[0]['hepburn']
         result[i]['pron'] = pron
@@ -174,7 +181,7 @@ def process_haruhi_line(line):
     # 通用读音修正（は，へ）
     line_pron_list = [item['pron'] for item in result]
     line_surface = ''.join([get_norm_surface(i) for i in result])
-    line_roma = kks.convert(''.join([token.phonetic for token in tokenizer.tokenize(line_surface)]))[0]['hepburn']
+    line_roma = ''.join([i['hepburn'] for i in kks.convert(''.join([token.phonetic for token in tokenizer.tokenize(line_surface)]))])
     line_roma_proc = min_error_split(line_pron_list, line_roma)
     for i in range(len(result)):
         if result[i]['type']==3:

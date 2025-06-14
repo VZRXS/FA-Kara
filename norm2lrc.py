@@ -38,8 +38,20 @@ def process_main(result_list):
             if item['orig'] != '':
                 current_line += f"{item['start']}{item['orig']}"
             last_end = item['end']
-        elif item['type'] == 0 and 'start' not in item:
-            if last_end and item['orig']=='\n':
+        elif item['type'] == 0 and item['orig']!='\n' and 'start' not in item:
+            if last_end and item['orig'] in (' ', '　'):
+                current_line += last_end+item['orig']
+                last_end = None
+            else:
+                current_line += item['orig']
+        elif item['type'] == 0 and item['orig']=='\n' and 'start' not in item:
+            if 'start' in item:
+                current_line += item['start']+item['orig']
+                result.append(current_line)
+                last_end_time = parse_time_to_hundredths(last_end)
+                current_line = ""
+                last_end = None
+            elif last_end:
                 current_line += last_end+item['orig']
                 result.append(current_line)
                 last_end_time = parse_time_to_hundredths(last_end)
@@ -47,12 +59,6 @@ def process_main(result_list):
                 last_end = None
             else:
                 current_line += item['orig']
-        elif item['type'] == 0 and item['orig']=='\n' and 'start' in item:
-            current_line += item['start']+item['orig']
-            result.append(current_line)
-            last_end_time = parse_time_to_hundredths(last_end)
-            current_line = ""
-            last_end = None
             
         i += 1
 
