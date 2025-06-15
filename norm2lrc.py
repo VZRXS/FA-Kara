@@ -17,8 +17,8 @@ def countdown_str_forward(starttime, bpm=60, num=4, symbol='●'):
     t = 6000 / bpm
     if isinstance(starttime, str):
         starttime = parse_time_to_hundredths(starttime)
-    result = ''
-    for i in range(num):
+    result = format_hundredths_to_time_str(starttime)
+    for i in range(1, num):
         result = format_hundredths_to_time_str(round(max(starttime-i*t,0))) + symbol + result
     return result
 

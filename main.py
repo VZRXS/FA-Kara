@@ -163,7 +163,7 @@ if __name__=='__main__':
                             interval_covered = True
                             break
                     if interval_covered:
-                        result_list[i]['end'] = format_hundredths_to_time_str(next_start - 2)
+                        result_list[i]['end'] = format_hundredths_to_time_str(max(next_start-2, current_end))
                 
     main_output = process_main(result_list, ruby_tag_offset, bpm, beats_per_bar)
     ruby_output = process_ruby(result_list)
