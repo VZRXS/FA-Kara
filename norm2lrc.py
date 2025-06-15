@@ -1,3 +1,4 @@
+import numpy as np
 import re
 
 def parse_time_to_hundredths(time_str):
@@ -12,6 +13,58 @@ def format_hundredths_to_time_str(total_hundredths):
     hundredths = remaining % 100
     return f"[{minutes:02d}:{seconds:02d}:{hundredths:02d}]"
 
+def non_silent_head_adjust(result_list, non_silent_ranges):
+    '保证乐句完全位于同一个非静音区间'
+    if not non_silent_ranges:
+        return result_list
+    else:
+        i = si = 0
+        sentences_list = []
+        st = None
+        while i < len(result_list):
+            if result_list[i].get('type') == 0:
+                if st:
+                    sentences_list.append((si, i-1, st, result_list[i-1].get('end')))
+                    st = None
+            elif not st:
+                si = i
+                st = result_list[i].get('start')
+            i += 1
+        for inds, inde, sst, sen in sentences_list:
+            sst = parse_time_to_hundredths(sst)
+            sen = parse_time_to_hundredths(sen)
+            interval_covered = False
+            for ns_start, ns_end in non_silent_ranges:
+                if int(ns_start * 100) > sst:
+                    break
+                # 检查非静音段是否覆盖整个区间
+                if int(ns_start * 100) <= sst and int(np.ceil(ns_end * 100)) >= sen:
+                    interval_covered = True
+                    break
+            if not interval_covered:
+                end_covered = False
+                for i in range(len(non_silent_ranges)):
+                    ns_start = int(non_silent_ranges[i][0] * 100)
+                    ns_end = int(np.ceil(non_silent_ranges[i][1] * 100))
+                    if ns_start > sen:
+                        break
+                    if ns_start <= sen:
+                        if ns_end >= sen:
+                            end_covered = True
+                            adjust_target = ns_start
+                            break
+                    elif ns_start <= parse_time_to_hundredths(result_list[inde].get('start')) <= ns_end:
+                        end_covered = True
+                        adjust_target = ns_start
+                        break
+                if not end_covered:
+                    print('Errors ignored while trying to correct end sounds...')
+                    break
+                else:
+                    adjust_target = min(parse_time_to_hundredths(result_list[inds]['end']), adjust_target)
+                    result_list[inds]['start'] = format_hundredths_to_time_str(adjust_target)
+        return result_list
+        
 def process_main(result_list):
     result = []
     current_line = ""
