@@ -13,6 +13,15 @@ def format_hundredths_to_time_str(total_hundredths):
     hundredths = remaining % 100
     return f"[{minutes:02d}:{seconds:02d}:{hundredths:02d}]"
 
+def countdown_str_forward(starttime, bpm=60, num=4, symbol='●'):
+    t = 6000 / bpm
+    if isinstance(starttime, str):
+        starttime = parse_time_to_hundredths(starttime)
+    result = format_hundredths_to_time_str(starttime)
+    for i in range(1, num):
+        result = format_hundredths_to_time_str(round(max(starttime-i*t,0))) + symbol + result
+    return result
+
 def non_silent_head_adjust(result_list, non_silent_ranges):
     '保证乐句完全位于同一个非静音区间'
     if not non_silent_ranges:
@@ -65,7 +74,7 @@ def non_silent_head_adjust(result_list, non_silent_ranges):
                     result_list[inds]['start'] = format_hundredths_to_time_str(adjust_target)
         return result_list
         
-def process_main(result_list):
+def process_main(result_list, tag_offset=-150, bpm=60, beats_per_bar=3):
     result = []
     current_line = ""
     last_end = None
@@ -78,11 +87,9 @@ def process_main(result_list):
         if ('start' in item and current_line == "" and item['type'] in [1, 2, 3]):
             current_start_time = parse_time_to_hundredths(item['start'])
 
-            if ((last_end_time and current_start_time - last_end_time > 1000) or
-                (last_end_time is None and current_start_time > 500)):
-                marker_time = max(0, current_start_time - 300)
-                marker_time_str = format_hundredths_to_time_str(marker_time)
-                current_line += f"{marker_time_str}●●●"
+            if ((last_end_time and current_start_time - last_end_time > 6000/bpm*beats_per_bar+400) or
+                (last_end_time is None and current_start_time > 6000/bpm*beats_per_bar+100)):
+                current_line += countdown_str_forward(current_start_time, bpm, beats_per_bar)
 
         if item['type'] in [1, 3] or item['type'] == 0 and item['orig']!='\n' and 'start' in item:
             current_line += f"{item['start']}{item['orig']}"
@@ -120,7 +127,7 @@ def process_main(result_list):
     result.append(current_line)
     if item['orig']!='\n':
         result.append("\n")
-    result.append("\n@Offset=-150")
+    result.append("\n@Offset="+str(tag_offset))
     return "".join(result)
 
 def process_ruby(result_list):

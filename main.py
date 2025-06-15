@@ -23,9 +23,9 @@ def non_silent_recog(audio_file, sr = None, frame_second = 1, threspct = 10, thr
     start = None
     for i, (t, active) in enumerate(zip(times, non_silent_frames)):
         if active and start is None:
-            start = t
+            start = max(t-frame_second/4, 0)
         elif not active and start is not None:
-            segments.append((start, t))
+            segments.append((start, t+frame_second/4))
             start = None
     if start is not None:
         segments.append((start, times[-1]))
@@ -43,8 +43,11 @@ if __name__=='__main__':
     parser.add_argument('-of', '--output_filename', type=str, default='', help='输出歌词文件名')
     parser.add_argument('-t', '--tail_correct', type=int, default=3, help='尾音拖长选项。建议取默认值3')
     parser.add_argument('-tl', '--tail_limit_window', type=float, default=0.8, help='全曲静音检测窗口时长，单位：秒')
-    parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数，单位：%。以音频能量前“百分位数”的一定比例作为静音检测阈值')
+    parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数，单位：％。以音频能量前“百分位数”的一定比例作为静音检测阈值')
     parser.add_argument('-tr', '--tail_thres_ratio', type=float, default=0.1, help='尾音阈值比例。以音频能量前百分位数的一定“比例”作为静音检测阈值')
+    parser.add_argument('--offset', type=int, default=-150, help='输出ruby歌词文件中Offset标签的偏移值')
+    parser.add_argument('--bpm', type=float, default=60, help='歌曲的BPM，导唱指示灯用')
+    parser.add_argument('--bpb', type=int, default=3, help='导唱指示灯的符号个数')
     args = parser.parse_args()
 
     sokuon_split = args.sokuon_split
@@ -57,6 +60,9 @@ if __name__=='__main__':
     silent_window_s = args.tail_limit_window
     tail_thres_pct = args.tail_thres_pct
     tail_thres_ratio = args.tail_thres_ratio
+    ruby_tag_offset = args.offset
+    bpm = args.bpm
+    beats_per_bar = args.bpb
     
     real_io_path = os.path.normpath(user_path) if os.path.isabs(user_path) else os.path.normpath(os.path.join(script_dir, user_path))
     input_text_path = os.path.normpath(os.path.join(real_io_path, user_text_path))
@@ -158,9 +164,9 @@ if __name__=='__main__':
                             interval_covered = True
                             break
                     if interval_covered:
-                        result_list[i]['end'] = format_hundredths_to_time_str(next_start - 2)
+                        result_list[i]['end'] = format_hundredths_to_time_str(max(next_start-2, current_end))
                 
-    main_output = process_main(result_list)
+    main_output = process_main(result_list, ruby_tag_offset, bpm, beats_per_bar)
     ruby_output = process_ruby(result_list)
     content = f"{main_output}\n{ruby_output}"
     output_filename = args.output_filename if args.output_filename else "".join(args.input_text.split('.')[:-1])
