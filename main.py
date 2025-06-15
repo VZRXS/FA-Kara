@@ -129,6 +129,8 @@ if __name__=='__main__':
             result_list[original_index]['start'] = result['start']
             result_list[original_index]['end'] = result['end']
 
+    result_list = non_silent_head_adjust(result_list, non_silent_ranges)
+    
     if tail_correct == 3:
         ns_small = non_silent_recog(audio_file, sr, .02, tail_thres_pct, tail_thres_ratio)
         ns_ends = [int(np.ceil(ns_end * 100)) for _, ns_end in ns_small]
