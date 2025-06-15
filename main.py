@@ -146,6 +146,16 @@ if __name__=='__main__':
                 right_index = bisect.bisect_left(ns_ends, next_start)
                 if left_index < right_index and left_index < len(ns_ends):
                     result_list[i]['end'] = format_hundredths_to_time_str(ns_ends[left_index])
+                else:
+                    interval_covered = False # 检查非静音段是否覆盖整个区间
+                    for nss_start, nss_end in ns_small:
+                        if int(nss_start * 100) > current_end:
+                            break
+                        if int(nss_start * 100) <= current_end and int(np.ceil(nss_end * 100)) >= next_start:
+                            interval_covered = True
+                            break
+                    if interval_covered:
+                        result_list[i]['end'] = format_hundredths_to_time_str(next_start - 2)
                 
     main_output = process_main(result_list)
     ruby_output = process_ruby(result_list)

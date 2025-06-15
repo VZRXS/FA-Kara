@@ -53,6 +53,10 @@ def align_audio_with_text(audio_file_path, text_tokens, non_silent_ranges=[], sr
             tokens = tokenizer(valid_tokens)
             token_spans = aligner(emission[0], tokens)
         
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         # 时间转换参数
         frame_duration = 1.0 / bundle.sample_rate * 320 * speed
         results = []
