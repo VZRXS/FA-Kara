@@ -1,0 +1,36 @@
+[Script Info]
+Title: Kasuga converted ASS
+Original Script: VZRXS
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Left,Source Han Serif,130,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,1,120,30,220,1
+Style: Right,Source Han Serif,130,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,3,30,120,40,1
+Style: Center,Source Han Serif,130,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,2,10,10,40,1
+Style: Upper,Source Han Serif,130,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,8,10,10,80,1
+Style: Title,Source Han Serif,160,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,5,10,10,10,1
+Style: Title - small,Source Han Serif,110,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,5,10,10,10,1
+Style: Singer,Source Han Serif,110,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,2,10,10,350,1
+Style: Singer - small,Source Han Serif,75,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,2,10,10,350,1
+Style: Sub,Source Han Serif,65,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,2,10,10,250,1
+Style: Left bottom sub,Source Han Serif,50,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,2,1,60,10,60,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Comment: 0,0:00:00.00,0:00:00.00,default,,0,0,0,,sub for 16:9: \pos(100,1020)\an1, sub for 4:3: \pos(335,720)\an1
+Comment: 0,0:00:00.00,0:00:00.00,K1,,0,0,0,code syl all,fxgroup.kara=syl.inline_fx==""
+Comment: 1,0:00:00.00,0:00:00.00,K1,overlay,0,0,0,template syl noblank all fxgroup kara,!retime("line",-200,300)!{\pos($center,$middle)\an5\shad0\fad(200,300)\1c&HFF0000&\3c&HFFFFFF&\clip(!$sleft-3!,0,!$sleft-3!,1080)\t($sstart,$send,\clip(!$sleft-3!,0,!$sright+3!,1080))\bord5}
+Comment: 0,0:00:00.00,0:00:00.00,K1,,0,0,0,template syl all fxgroup kara,!retime("line",-200,300)!{\pos($center,$middle)\an5\fad(200,300)}
+Comment: 1,0:00:00.00,0:00:00.00,K1,overlay,0,0,0,template furi all,!retime("line",-200,300)!{\pos($center,!$middle+10!)\an5\shad0\fad(200,300)\1c&HFF0000&\3c&HFFFFFF&\clip(!$sleft-3!,0,!$sleft-3!,1080)\t($sstart,$send,\clip(!$sleft-3!,0,!$sright+3!,1080))\bord5}
+Comment: 0,0:00:00.00,0:00:00.00,K1,,0,0,0,template furi all,!retime("line",-200,300)!{\pos($center,!$middle+10!)\an5\fad(200,300)}
+Comment: 0,0:00:00.00,0:00:00.00,K1,music,0,0,0,template fx no_k,!retime("line",-200,300)!{\pos($center,!$middle!)\an5\1c&H505050&\3c&HFFFFFFF&}
+Dialogue: 0,0:00:00.00,0:00:05.00,Title,,0,0,0,,TITLE
+Dialogue: 0,0:00:00.00,0:00:05.00,Singer,,0,0,0,,♪SINGER
+Dialogue: 0,0:00:00.00,0:00:05.00,Sub,,0,0,0,,『ARTWORK』
+Dialogue: 0,0:00:00.00,0:00:05.00,Left bottom sub,,0,0,0,,作詞：\N作曲：\N編曲：

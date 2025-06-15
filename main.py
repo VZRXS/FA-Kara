@@ -48,6 +48,7 @@ if __name__=='__main__':
     parser.add_argument('--offset', type=int, default=-150, help='输出ruby歌词文件中Offset标签的偏移值')
     parser.add_argument('--bpm', type=float, default=60, help='歌曲的BPM，导唱指示灯用')
     parser.add_argument('--bpb', type=int, default=3, help='导唱指示灯的符号个数')
+    parser.add_argument('--ass_header', type=str, default='ass_header.txt', help='ass header 路径')
     args = parser.parse_args()
 
     sokuon_split = args.sokuon_split
@@ -70,6 +71,13 @@ if __name__=='__main__':
 
     print('Loading files...')
     result_list = []
+    
+    # with open(input_text_path, 'r', encoding='utf-8') as file:
+    #     lines = file.read().splitlines()
+    # for line in lines:
+    #     if line.strip():
+    #         result_list.extend(hn.process_haruhi_line(line, sokuon_split, hatsuon_split))
+    
     with open(input_text_path, 'r', encoding='utf-8') as file:
         for line in file:
             if line.strip():
@@ -175,22 +183,30 @@ if __name__=='__main__':
     rlf_output = process_rlf(result_list)
     with open(os.path.join(real_io_path, f'{output_filename}_rlf.lrc'), 'w', encoding='utf-8') as f:
         f.write(rlf_output)
-    ass_output = norm2ass.process_norm2assV2(result_list)
-    ass_head = '''[Script Info]
-ScriptType: v4.00+
-YCbCr Matrix: TV.601
-PlayResX: 1920
-PlayResY: 1080
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Source Han Serif,71,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.99999,1.99999,2,11,11,101,1
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-'''
+    ass_header_path = os.path.join(real_io_path, args.ass_header)
+    ass_output = norm2ass.norm2ass_custom(result_list, pretime=200, posttime=0, upper_line_indices=[-1], enable_duet=False, ass_header_path=ass_header_path)
     with open(os.path.join(real_io_path, f'{output_filename}.ass'), 'w', encoding='utf-8') as f:
-        f.write(ass_head+ass_output)
+        f.write(ass_output)
+    
+#     ass_head = '''[Script Info]
+# ScriptType: v4.00+
+# YCbCr Matrix: TV.601
+# PlayResX: 1920
+# PlayResY: 1080
+
+# [V4+ Styles]
+# Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+# Style: Default,Source Han Serif,71,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.99999,1.99999,2,11,11,101,1
+
+# [Events]
+# Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+# '''
+    # ass_output = norm2ass.process_norm2assV2(result_list, pretime=20, posttime=0)
+    # with open('ass_header.txt', 'r') as f:
+    #     ass_header = f.read()
+    # with open(os.path.join(real_io_path, f'{output_filename}2.ass'), 'w', encoding='utf-8') as f:
+    #     f.write(ass_header+ass_output)
+        # f.write(ass_head+ass_output)
     # hrhlrc_output = ''
     # for i in ass_output.splitlines():
     #     hrhlrc_output += ass2lrc.ass2lrc(i, 0)+'\n'
