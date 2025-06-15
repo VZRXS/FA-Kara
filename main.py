@@ -40,6 +40,7 @@ if __name__=='__main__':
     parser.add_argument('-p', '--path_io', default='', help='输入输出文件目录。基于主文件所在目录，支持绝对路径或相对路径')
     parser.add_argument('-ia', '--input_audio', default='i.wav', help='输入音频文件名')
     parser.add_argument('-it', '--input_text', default='i.txt', help='输入歌词文件名')
+    parser.add_argument('-of', '--output_filename', type=str, default='', help='输出歌词文件名')
     parser.add_argument('-t', '--tail_correct', type=int, default=3, help='尾音拖长选项。建议取默认值3')
     parser.add_argument('-tl', '--tail_limit_window', type=float, default=0.8, help='全曲静音检测窗口时长，单位：秒')
     parser.add_argument('-tp', '--tail_thres_pct', type=float, default=10, help='尾音阈值百分位数，单位：%。以音频能量前“百分位数”的一定比例作为静音检测阈值')
@@ -150,10 +151,11 @@ if __name__=='__main__':
     main_output = process_main(result_list)
     ruby_output = process_ruby(result_list)
     content = f"{main_output}\n{ruby_output}"
-    with open(os.path.join(real_io_path, 'o_ruby.lrc'), 'w', encoding='utf-8') as f:
+    output_filename = args.output_filename if args.output_filename else "".join(args.input_text.split('.')[:-1])
+    with open(os.path.join(real_io_path, f'{output_filename}_ruby.lrc'), 'w', encoding='utf-8') as f:
         f.write(content)
     rlf_output = process_rlf(result_list)
-    with open(os.path.join(real_io_path, 'o_rlf.lrc'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(real_io_path, f'{output_filename}_rlf.lrc'), 'w', encoding='utf-8') as f:
         f.write(rlf_output)
     ass_output = norm2ass.process_norm2assV2(result_list)
     ass_head = '''[Script Info]
@@ -169,7 +171,7 @@ Style: Default,Source Han Serif,71,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
-    with open(os.path.join(real_io_path, 'o.ass'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(real_io_path, f'{output_filename}.ass'), 'w', encoding='utf-8') as f:
         f.write(ass_head+ass_output)
     # hrhlrc_output = ''
     # for i in ass_output.splitlines():
